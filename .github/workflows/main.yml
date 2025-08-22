@@ -1,38 +1,25 @@
-name: CI/CD - Deploy to EC2
+name: Deploy to EC2
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          request_pty: true
-          debug: true
-          script: |
-            set -e
-            echo "✅ Connected to EC2"
-            cd /home/ubuntu/pern-stack
-            git fetch origin main
-            git reset --hard origin/main
-            cd backend
-            npm ci --omit=dev
-            pm2 restart all || pm2 start backend/server.js --name pern-backend
-            cd ../frontend
-            npm ci
-            npm run build
-            sudo rsync -a --delete dist/ /var/www/pern-frontend/
-            sudo nginx -t
-            sudo systemctl reload nginx
-            echo "🚀 Deployment finished successfully!"
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "cd ~/my-app && git pull origin main && pm2 restart all"
