@@ -48,7 +48,7 @@ function ProductPage() {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <button onClick={() => navigate("/")} className="btn btn-ghost mb-8">
         <ArrowLeftIcon className="size-4 mr-2" />
-        Back to Products
+        Back to the Products
       </button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
