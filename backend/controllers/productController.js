@@ -1,14 +1,9 @@
-import { sql } from "../config/db.js";
+import { pool } from "../server.js"; // Import the pg Pool from server.js
 
 export const getProducts = async (req, res) => {
   try {
-    const products = await sql`
-      SELECT * FROM products
-      ORDER BY created_at DESC
-    `;
-
-    console.log("fetched products", products);
-    res.status(200).json({ success: true, data: products });
+    const result = await pool.query("SELECT * FROM products ORDER BY created_at DESC");
+    res.status(200).json({ success: true, data: result.rows });
   } catch (error) {
     console.log("Error in getProducts function", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -23,13 +18,11 @@ export const createProduct = async (req, res) => {
   }
 
   try {
-    const newProduct = await sql`
-      INSERT INTO products (name,price,image)
-      VALUES (${name},${price},${image})
-      RETURNING *
-    `;
-
-    res.status(201).json({ success: true, data: newProduct[0] });
+    const result = await pool.query(
+      "INSERT INTO products (name, price, image) VALUES ($1, $2, $3) RETURNING *",
+      [name, price, image]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.log("Error in createProduct function", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -40,11 +33,11 @@ export const getProduct = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const product = await sql`
-     SELECT * FROM products WHERE id=${id}
-    `;
-
-    res.status(200).json({ success: true, data: product[0] });
+    const result = await pool.query("SELECT * FROM products WHERE id=$1", [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+    res.status(200).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.log("Error in getProduct function", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -56,21 +49,16 @@ export const updateProduct = async (req, res) => {
   const { name, price, image } = req.body;
 
   try {
-    const updateProduct = await sql`
-      UPDATE products
-      SET name=${name}, price=${price}, image=${image}
-      WHERE id=${id}
-      RETURNING *
-    `;
+    const result = await pool.query(
+      "UPDATE products SET name=$1, price=$2, image=$3 WHERE id=$4 RETURNING *",
+      [name, price, image, id]
+    );
 
-    if (updateProduct.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    res.status(200).json({ success: true, data: updateProduct[0] });
+    res.status(200).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.log("Error in updateProduct function", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -81,18 +69,16 @@ export const deleteProduct = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const deletedProduct = await sql`
-      DELETE FROM products WHERE id=${id} RETURNING *
-    `;
+    const result = await pool.query(
+      "DELETE FROM products WHERE id=$1 RETURNING *",
+      [id]
+    );
 
-    if (deletedProduct.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    res.status(200).json({ success: true, data: deletedProduct[0] });
+    res.status(200).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.log("Error in deleteProduct function", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
