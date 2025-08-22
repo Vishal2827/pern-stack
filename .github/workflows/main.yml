@@ -1,4 +1,4 @@
-name: Test SSH
+name: CI/CD Pipeline
 
 on:
   push:
@@ -6,14 +6,14 @@ on:
       - main
 
 jobs:
-  ssh-test:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Test SSH
+      - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -21,6 +21,13 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            echo "SSH connection successful!"
-            whoami
-            pwd
+            cd /home/ubuntu/pern-stack/backend
+            git pull origin main
+            npm install --production
+            pm2 restart all || pm2 start backend/server.js --name "pern-backend"
+            cd /home/ubuntu/pern-stack/frontend
+            git pull origin main
+            npm install
+            npm run build
+            sudo cp -r dist/* /var/www/pern-frontend/
+            sudo systemctl restart nginx
