@@ -13,6 +13,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Debug SSH key
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > key_test
+          chmod 600 key_test
+          ssh -i key_test -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "whoami; pwd"
+
       - name: Test SSH
         uses: appleboy/ssh-action@v0.1.8
         with:
