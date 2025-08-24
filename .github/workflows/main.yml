@@ -29,5 +29,6 @@ jobs:
             git pull origin main
             npm install
             npm run build
+            sudo rm -rf /var/www/pern-frontend/*
             sudo cp -r dist/* /var/www/pern-frontend/
             sudo systemctl restart nginx
